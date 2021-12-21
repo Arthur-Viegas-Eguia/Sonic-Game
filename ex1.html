@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>ex1</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script>
+        $().ready(function(){
+            /**
+             * The variable containing the start screen of the game.
+             * Making it animated works better than just a background image.
+            */
+            var startScreen;
+            var start = new Image();//Start image
+            start.src = "./hqdefault.jpg";
+            var flag = true; // Does not let the game be started multiple times at once
+            /**
+             * Variable containing the end screen of the game.
+             * Animated works better than a background image.
+            */
+            var endScreen;
+            var gameOver = new Image(); //Game over image
+            gameOver.src = "./go.jpg";
+            /**
+             * Starting Canvas and background music.
+            */
+            var canvas = document.getElementById("canvas");
+            var context = canvas.getContext("2d");
+            context.font = "30px arial";
+            context.fillStyle = "white";
+            var musicGameOver = document.getElementById("musicGameOver");
+            var musicGame = document.getElementById("musicGame");
+            var musicStart = document.getElementById("musicStart");
+            /**
+             * Number of frames already run.
+             * use for score and add enemies.
+            */
+            var screen = 0;
+            /**
+             * Initializes the images of sonic and 
+             * his enemies.
+            */
+            var sonicImg = new Image(); //Sonic
+            sonicImg.src = "./sonic.png";
+            var bulletbill = new Image(); //bulletbill top
+            bulletbill.src = "./bulletbill.png";
+            var bulletbill2 = new Image(); //bulletbill side
+            bulletbill2.src = "./bulletbill2.png";
+            /**
+             * Arrays containing all Sonic's enemies which are
+             * currently on screen. 
+            */
+            enemiesUp = [];
+            enemiesSide = [];
+            /**
+             * Draws and animates the start screen of the game.
+             * Doesn't work unless animated, I tried to just draw the image,
+             * but it did not work. .
+            */
+            function animateStartScreen(){
+                musicStart.play();
+                context.drawImage(start, 0, 0, canvas.width, canvas.height);
+                startScreen = requestAnimationFrame(animateStartScreen);
+            }
+            /**
+             * Draws and animates the game over screen.
+             * Doesn't work unless animated, I tried just 
+             * clearing the rect and drawing on top but it
+             * caused bugs.
+            */
+            function animateScoreScreen(){
+                context.drawImage(gameOver, 0, 0, canvas.width, canvas.height);
+                context.font = "40px arial";
+                context.fillText("Score "+screen, 200, 350);
+                endScreen = requestAnimationFrame(animateScoreScreen);
+            }
+            /**
+             * Our sonic object. It contains all variables which
+             * help animate and position the charactet.
+            */
+            var sonicObject = {
+                /**
+                 * Position of sprites within the file
+                */
+                sonicx: 409,
+                sonicy: 75,
+                /**
+                 * Height and width of sprites.
+                */
+                sonicw: 40,
+                sonich: 28,
+                //speed sonic moves
+                step: 5,
+                /**
+                 * Sonic standing still position.
+                */
+                SonicDefault: function(){
+                    this.sonicx = 409; 
+                    this.sonicy = 75;
+                    this.sonicw = 40;
+                    this.sonich = 28;
+                },
+                /**
+                 * Sprites of sonic moving
+                */
+                SonicRight:[{sonicx: 36, sonicy: 21, sonicw: 40,
+                    sonich: 28}, {sonicx: 72, sonicy: 21, sonicw: 40,
+                    sonich: 28}, {sonicx: 105, sonicy: 21, sonicw: 40,
+                    sonich: 28}, {sonicx: 135, sonicy: 21, sonicw: 40,
+                    sonich: 28}, {sonicx: 164, sonicy: 21, sonicw: 40,
+                    sonich: 28}, {sonicx: 194, sonicy: 21, sonicw: 40,
+                    sonich: 28}],
+                SonicLeft:[ {sonicx: 386, sonicy: 721, sonicw: 41,
+                    sonich: 34}, {sonicx: 421, sonicy: 721, sonicw: 41,
+                    sonich: 34}, {sonicx: 456, sonicy: 721, sonicw: 41,
+                    sonich: 34}, {sonicx: 491, sonicy: 721, sonicw: 41,
+                    sonich: 34}, {sonicx: 526, sonicy: 721, sonicw: 41,
+                    sonich: 34}],
+                SonicDown:[ {sonicx: 784, sonicy: 82, sonicw: 36,
+                    sonich: 20}, {sonicx: 868, sonicy: 82, sonicw: 36,
+                    sonich: 20}, {sonicx: 898, sonicy: 82, sonicw: 36,
+                    sonich: 20}, {sonicx: 952, sonicy: 82, sonicw: 36,
+                    sonich: 20}, {sonicx: 978, sonicy: 82, sonicw: 36,
+                    sonich: 20}],
+                SonicUp:[{
+                    sonicx: 7, sonicy: 610, sonicw: 41, sonich: 19},
+                          {sonicx: 36, sonicy: 610, sonicw: 41, sonich: 19},
+                           {sonicx: 95, sonicy: 610, sonicw: 41,
+                    sonich: 19}, {sonicx: 125, sonicy: 610, sonicw: 41,
+                    sonich: 19}, {sonicx: 154, sonicy: 610, sonicw: 41,
+                    sonich: 19}, {sonicx: 184, sonicy: 610, sonicw: 41,
+                    sonich: 19}, {sonicx: 214, sonicy: 610, sonicw: 41,
+                    sonich: 19}],
+                /**
+                * Sonic's position upon starting the game
+                */
+                x:150,
+                y: 150,
+                h: 40,
+                w: 28
+            }
+            /**
+             * Adds enemies that move from the bottom to the top of the screen
+            */
+            function addEnemiesUp(){
+                
+                    var min = Math.ceil(0);
+                    var max = Math.floor(canvas.width - 30);
+                    var xpos = Math.floor(Math.random() * (max - min + 1)) + min;
+                    enemiesUp.push({
+                        "x": xpos,
+                        "y": canvas.height + 50,
+                        "w": 30,
+                        "h": 30,
+                        /**
+                         * Removes from the array enemies which 
+                         * are not on the screen.
+                        */
+                        update:function(){
+                            this.y -= 3;
+                            if(this.y + this.h < 0){
+                                enemiesUp.splice(this, 1);
+                            }
+
+                        },
+                        /**
+                         * Draws the enemies on the screen on their
+                         * current position.
+                        */
+                        draw:function(){
+                            
+                            context.drawImage(bulletbill, this.x,this.y,this.w,this.h);
+                        }
+                    });
+                
+            }
+            /**
+             * Adds enemies that move from one side to the other of the screen
+            */
+            function addEnemiesSide(){
+                    var min = Math.ceil(0);
+                    var max = Math.floor(canvas.height - 30);
+                    var ypos = Math.floor(Math.random() * (max - min + 1)) + min;
+                    enemiesSide.push({
+                        "x": canvas.width + 50,
+                        "y": ypos,
+                        "w": 30,
+                        "h": 30,
+                        /**
+                         * Removes from the array enemies which are not
+                         * on the screen.
+                        */
+                        update:function(){
+                            this.x -= 3;
+                            if(this.x + this.w < 0){
+                                enemiesSide.splice(this, 1);
+                            }
+                        },
+                        /**
+                         * Draws the enemies on the screen on their
+                         * current positions.
+                        */
+                        draw:function(){
+                            context.drawImage(bulletbill2, this.x,this.y,this.w,this.h);
+                        }
+                    });                    
+                
+            }
+
+            /**
+             * Check if sonic has collided with bulletbill.
+             * Ends the game in case of a collision.
+            */
+            function checkCollision(){
+                for(i = 0; i < enemiesUp.length; i++){
+                    if(sonicObject.y < (enemiesUp[i].y + enemiesUp[i].h) && (sonicObject.y + sonicObject.h) > enemiesUp[i].y && sonicObject.x < (enemiesUp[i].x + enemiesUp[i].w) && (sonicObject.x + sonicObject.w) > enemiesUp[i].x){
+                        musicGame.pause();
+                        musicGameOver.play();
+                        cancelAnimationFrame(game);
+                        context.clearRect(0,0, canvas.width, canvas.height);
+                        endScreen = requestAnimationFrame(animateScoreScreen);
+                    }
+                }
+                for(i = 0; i < enemiesSide.length; i++){
+                    if(sonicObject.y < (enemiesSide[i].y + enemiesSide[i].h) && (sonicObject.y + sonicObject.h) > enemiesSide[i].y && sonicObject.x < (enemiesSide[i].x + enemiesSide[i].w) && (sonicObject.x + sonicObject.w) > enemiesSide[i].x){
+                        musicGame.pause();
+                        musicGameOver.play();
+                        cancelAnimationFrame(game);
+                        context.clearRect(0,0, canvas.width, canvas.height);
+                        endScreen = requestAnimationFrame(animateScoreScreen);
+                    }
+                }
+            }  
+            /**
+             * Runs the game per se. Requests animation for movements
+             * and updates the sprites and its positions.
+            */
+            function animate(){
+                /**
+                 * Cleans the screen and draws sonic and the current score
+                */
+                context.clearRect(0,0, canvas.width, canvas.height);
+                screen += 1;   
+                context.fillText(screen, 400, 50);            
+                context.drawImage(sonicImg, sonicObject.sonicx, sonicObject.sonicy, sonicObject.sonich, sonicObject.sonicw, sonicObject.x, sonicObject.y, sonicObject.w, sonicObject.h);
+                /**
+                 * Updates draws enemies on a new position and remoces
+                 * enemies which are not on the screen from their array.
+                */
+                for(i = 0; i < enemiesUp.length; i++){
+                    enemiesUp[i].update();
+                    enemiesUp[i].draw();
+                }
+                for(i = 0; i < enemiesSide.length; i++){
+                    enemiesSide[i].update();
+                    enemiesSide[i].draw();
+                }
+                game = requestAnimationFrame(animate); 
+                checkCollision();
+                /**
+                 * If Sonic gets out of the screen, moves it to the opposite
+                 * side.
+                */
+                if(!(0<=sonicObject.y&&canvas.height>=(sonicObject.y + sonicObject.h)&&0<=sonicObject.x&&canvas.width>=(sonicObject.x + sonicObject.w))){  
+                    if(sonicObject.x < 0){
+                        sonicObject.x = canvas.width-sonicObject.w;
+                    }
+                    if((sonicObject.x + sonicObject.w) > canvas.width){ 
+                        sonicObject.x = 0;
+                    }
+                    if(sonicObject.y < 0){
+                        sonicObject.y = canvas.height-sonicObject.h;
+                    }
+                    if((sonicObject.y  + sonicObject.h) > canvas.height){ 
+                        sonicObject.y = 0;
+                    }
+                } 
+                 
+            }
+            /**
+             * Makes sonic move to the desired direction.
+            */
+            function update(dir){
+                if(dir == "right"){
+                    sonicObject.x += sonicObject.step;
+                    spritePos = screen % 6;
+                    sonicObject.sonicx = sonicObject.SonicRight[spritePos].sonicx;
+                    sonicObject.sonicy = sonicObject.SonicRight[spritePos].sonicy;
+                    sonicObject.sonich = sonicObject.SonicRight[spritePos].sonich;
+                    sonicObject.sonicw = sonicObject.SonicRight[spritePos].sonicw;
+                }
+                else if(dir == "left"){
+                    sonicObject.x -= sonicObject.step;
+                    spriteNum = screen % 5;
+                    sonicObject.sonicx = sonicObject.SonicLeft[spriteNum].sonicx;
+                    sonicObject.sonicy = sonicObject.SonicLeft[spriteNum].sonicy;
+                    sonicObject.sonich = sonicObject.SonicLeft[spriteNum].sonich;
+                    sonicObject.sonicw = sonicObject.SonicLeft[spriteNum].sonicw;
+                }
+                else if(dir == "bottom"){
+                    sonicObject.y += sonicObject.step;
+                    spriteNum = screen % 5;
+                    sonicObject.sonicx = sonicObject.SonicDown[spriteNum].sonicx;
+                    sonicObject.sonicy = sonicObject.SonicDown[spriteNum].sonicy;
+                    sonicObject.sonich = sonicObject.SonicDown[spriteNum].sonich;
+                    sonicObject.sonicw = sonicObject.SonicDown[spriteNum].sonicw;
+                }
+                else if(dir == "top"){
+                    sonicObject.y -= sonicObject.step;
+                    spriteNum = screen % 6;
+                    sonicObject.sonicx = sonicObject.SonicUp[spriteNum].sonicx;
+                    sonicObject.sonicy = sonicObject.SonicUp[spriteNum].sonicy;
+                    sonicObject.sonich = sonicObject.SonicUp[spriteNum].sonich;
+                    sonicObject.sonicw = sonicObject.SonicUp[spriteNum].sonicw;
+                }
+                else{
+                    spriteNum = screen % 6;
+                    sonicObject.sonicx = sonicObject.SonicDefault[spriteNum].sonicx;
+                    sonicObject.sonicy = sonicObject.SonicDefault[spriteNum].sonicy;
+                    sonicObject.sonich = sonicObject.SonicDefault[spriteNum].sonich;
+                    sonicObject.sonicw = sonicObject.SonicDefault[spriteNum].sonicw;
+                }
+            }
+            /**
+             * Checks if a key was pressed by the user. If
+             * it is a command of the game, like moving or 
+             * starting the game, executes the operation.
+            */
+            $(document).keydown(function(event){
+                /**
+                 * Start the game
+                */
+                if(event.which == 32 && flag){
+                    flag = false;
+                    setInterval(addEnemiesUp,1000);
+                    setInterval(addEnemiesSide,1000);
+                    game = requestAnimationFrame(animate);
+                    musicStart.pause();
+                    musicGame.play();
+                    cancelAnimationFrame(startScreen);
+                }
+                /**
+                 * Move
+                */
+                if(event.which == 38){
+                    update("top");
+                }
+                if(event.which == 40){
+                    update("bottom"); 
+                }
+                if(event.which == 37){
+                    update("left"); 
+                }
+                if(event.which == 39){
+                    update("right"); 
+                }
+            });
+            /**
+             * Checks if the key is no longer being pressed,
+             * this way sonic can be on his default position.
+            */
+            $(document).keyup(function(event){
+                sonicObject.SonicDefault();
+            });
+            /**
+            * Starts the game.
+            */
+            startScreen = requestAnimationFrame(animateStartScreen);
+        });</script>
+	</head>
+	<body>
+        <audio id="musicGameOver" loop>
+            <source src="Rick%20Astley%20%20%20Never%20Gonna%20Give%20You%20Up%20(Video).mp3" type="audio/mpeg" />
+            <source src="Rick%20Astley%20Never%20Gonna%20Give%20You%20Up%20(Video)%20(online-audio-converter.com).ogg" type="audio/ogg" />
+        </audio>
+        <audio id="musicGame" loop>
+            <source src="Untitled Project (online-audio-converter.com).mp3" type="audio/mpeg" />
+            <source src="Untitled Project (online-audio-converter.com).ogg" type="audio/ogg" />
+        </audio>
+        <audio id="musicStart">
+            <source src="Aula 1_Frankie.mp3" type="audio/mpeg" />
+            <source src="Untitled Project (online-audio-converter.com).ogg" type="audio/ogg" />
+        </audio>
+        <canvas height="500" width="600" style="background-image: url(backg.jpg)" id="canvas"></canvas>
+	</body>
+</html>
